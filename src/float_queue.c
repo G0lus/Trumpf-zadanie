@@ -10,19 +10,42 @@
 queue_handle queue_init(size_t size, float* array){
     queue_handle handle = {
         .size = size,
-        .rear = -1,
-        .front = -1,
+        .rear = 0,
+        .front = 0,
+        .length = 0,
         .data = array
     };
+    #ifdef QUEUE_LOG
     logger("queue init with size %ld. Array ptr %p\n", size, array);
+    #endif
     return handle;
 }
 
-bool queue_is_empty(queue_handle* handle){
-    if(handle->front == -1 && handle->rear == -1){
-        return true;
+bool queue_is_empty(const queue_handle* handle){
+    return handle->length == 0;
+}
+
+bool queue_is_full(const queue_handle* handle){
+    return handle->length == handle->size;
+}
+
+float queue_get_max(queue_handle* handle){
+    float max = 0;
+    for(size_t i = 0; i < handle->length; i++){
+        size_t pos = (handle->front + i) % handle->size;
+        max = handle->data[pos] > max ? handle->data[pos] : max;
     }
-    return false;
+    #ifdef QUEUE_LOG   
+    logger("queue_max %.2f\n", max);
+    #endif
+    return max;
+}
+
+size_t queue_get_len(const queue_handle* handle){
+    #ifdef QUEUE_LOG   
+    logger("queue_max %ld\n", handle->length);
+    #endif
+    return handle->length;
 }
 
 int queue_insert(queue_handle* handle, float data){
@@ -30,42 +53,44 @@ int queue_insert(queue_handle* handle, float data){
         return STATUS_ERROR;
     }
 
-    if(handle->rear + 1 == handle->front || handle->rear - handle->front == handle->size){
+    if(queue_is_full(handle)){
         /* Overflow */
         return STATUS_ERROR;
     }
-    if(queue_is_empty(handle)){
-        logger("queue empty \n");
-        handle->front = 0;
-        handle->rear = 0;
-    }
-
+    
     handle->data[handle->rear] = data;
+    #ifdef QUEUE_LOG
     logger("queue insert to rear %ld | data -> %.2f\n", handle->rear, handle->data[handle->rear]);
-    handle->rear = (handle->rear + 1) % handle->size;
-
+    #endif
+    if(!queue_is_full(handle)){
+        handle->rear = (handle->rear + 1) % handle->size;
+    }
+    handle->length++;
     return STATUS_OK;
 }
 
 int queue_remove(queue_handle* handle, float* data){
-    if(!handle || !data){
+    if(!handle){
         return STATUS_ERROR;
     }
     
-    if(handle->front == -1){
+    if(queue_is_empty(handle)){
+        #ifdef QUEUE_LOG
         logger("queue underfow\n");
+        #endif
         return STATUS_ERROR;
     }
 
-    *data = handle->data[handle->front];
-    logger("queue remove from front %ld | data -> %.2f\n", handle->front, handle->data[handle->front]);
+    if(data){
+        *data = handle->data[handle->front];
+    }
 
-    if(handle->front + 1 == handle->rear){
-        handle->front = -1;
-        handle->rear = -1;
-    }else{
+    #ifdef QUEUE_LOG
+    logger("queue remove from front %ld | data -> %.2f\n", handle->front, handle->data[handle->front]);
+    #endif
+    if(!queue_is_empty(handle)){
         handle->front = (handle->front + 1) % handle->size;
     }
-        
+    handle->length--;
     return STATUS_OK;
 }

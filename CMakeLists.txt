@@ -10,7 +10,11 @@ file(GLOB_RECURSE SRC
 )
 
 include_directories(inc)
+add_compile_definitions(
+    # QUEUE_LOG
+)
 add_compile_options(-Wall -Werror)
+
 add_executable(${PROJECT_NAME} ${SRC})
 
 enable_testing(true)

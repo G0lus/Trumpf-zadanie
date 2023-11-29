@@ -8,12 +8,40 @@
 
 #define ARGV_REQUIRED 2U
 #define DATA_CHUNK_SIZE 8096U
-#define VALUES_CHUNK_SIZE 1024U
-#define MOVING_WINDOW_SIZE 3U
+#define VALUES_CHUNK_SIZE 2048U
+#define MOVING_WINDOW_SIZE 500U
 #define VALUES_COLUMNS 4U
 
 
+void moving_max(size_t window_size, size_t n, float in[static n], float out[static n]){
+    float window[window_size];
+    queue_handle handle = queue_init(window_size, &window[0]);
+    for(size_t i = 0; i < n; i++){
+        
+        if(queue_is_full(&handle)){
+            queue_remove(&handle, NULL);
+        }
+        queue_insert(&handle, in[i]);
+        out[i] = queue_get_max(&handle);
+    }
+}
 
+void moving_average(size_t window_size, size_t n, float in[static n], float out[static n]){
+    float window[window_size];
+    queue_handle handle = queue_init(window_size, &window[0]);
+    float sum = 0;
+    
+    for(size_t i = 0; i < n; i++){
+        if(queue_is_full(&handle)){
+            float a = 0;
+            queue_remove(&handle, &a);
+            sum -= a;
+        }
+        queue_insert(&handle, in[i]);
+        sum += in[i];
+        out[i] = sum / (float)queue_get_len(&handle);
+    }
+}
 
 /**
  * @brief Parses data from file to float values.
@@ -90,8 +118,19 @@ int main(int argc, char** argv){
     }
     float values[VALUES_COLUMNS][VALUES_CHUNK_SIZE] = {0};
     size_t values_cnt = parse_data(bytes_read, data, &values[0][0]);
+    
+    #ifdef PARSING_DATA_LOG
     for(size_t i = 0; i < values_cnt; i++){
         logger("%.2f\n", values[0][i]);
     }
+    #endif
+    moving_average(MOVING_WINDOW_SIZE, values_cnt, &values[0][0], &values[1][0]);
+    moving_max(MOVING_WINDOW_SIZE, values_cnt, &values[0][0], &values[2][0]);
+    FILE* out_file = fopen("out.csv", "w");
+    fprintf(out_file, "data\tmoving_avg\tmoving_max\tmoving_min\n");
+    for(size_t i = 0; i < values_cnt; i ++){
+        fprintf(out_file, "%.2f\t%.2f\t\t%.2f\t\t%.2f\n", values[0][i], values[1][i],values[2][i], 0.0f/*out[2][i]*/);
+    }
+    fprintf(out_file, "\n");
     return EXIT_SUCCESS;
 }

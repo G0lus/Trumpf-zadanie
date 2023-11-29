@@ -5,20 +5,22 @@
 
 float data[10];
 
-void test_insert(queue_handle* handle){
-    assert(!queue_insert(handle, 2.0));
+void test_insert(void){
+    queue_handle handle = queue_init(1, data);
+    assert(!queue_insert(&handle, 2.0));
+    float val = 0;
+    assert(!queue_remove(&handle, &val));
+}
 
-    float data = 0;
-    assert(!queue_remove(handle, &data));
-    assert(data == 2.0);
-    assert(queue_is_empty(handle));
+void test_empty(void){
+    queue_handle handle = queue_init(1, data);
+    assert(!queue_insert(&handle, 2.0));
+    assert(!queue_remove(&handle, NULL));
+    assert(queue_is_empty(&handle));
 }
 
 int main(void){
-    queue_handle handle = queue_init(10, &data[0]);
-    assert(&handle);
-    assert(queue_is_empty(&handle));
-
-    test_insert(&handle);
+    test_empty();
+    test_insert();
     return EXIT_SUCCESS;
 }
