@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <float.h>
 
 #include "float_queue.h"
 #include "logger.h"
@@ -41,9 +42,21 @@ float queue_get_max(queue_handle* handle){
     return max;
 }
 
+float queue_get_min(queue_handle* handle){
+    float min = FLT_MAX;
+    for(size_t i = 0; i < handle->length; i++){
+        size_t pos = (handle->front + i) % handle->size;
+        min = handle->data[pos] < min ? handle->data[pos] : min;
+    }
+    #ifdef QUEUE_LOG   
+    logger("queue_min %.2f\n", min);
+    #endif
+    return min;
+}
+
 size_t queue_get_len(const queue_handle* handle){
     #ifdef QUEUE_LOG   
-    logger("queue_max %ld\n", handle->length);
+    logger("queue_len %ld\n", handle->length);
     #endif
     return handle->length;
 }
