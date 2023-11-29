@@ -115,6 +115,7 @@ size_t read_file(char filename[static 1], size_t offset, size_t n, char data[sta
         }
         data[i] = ch;
     }
+    fclose(data_file);
     return i;
 }
 
@@ -146,5 +147,6 @@ int main(int argc, char** argv){
         fprintf(out_file, "%.2f\t%.2f\t\t%.2f\t\t%.2f\n", values[0][i], values[1][i], values[2][i], values[3][i]);
     }
     fprintf(out_file, "\n");
+    fclose(out_file);
     return EXIT_SUCCESS;
 }
