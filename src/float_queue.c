@@ -8,17 +8,15 @@
 #define STATUS_OK 0
 
 
-queue_handle queue_init(size_t size, float* array){
+// queue_handle queue_init(size_t size, float* array){
+queue_handle queue_init(void){
     queue_handle handle = {
-        .size = size,
+        .size = MOVING_WINDOW_SIZE,
         .rear = 0,
         .front = 0,
         .length = 0,
-        .data = array
+        // .data = array
     };
-    #ifdef QUEUE_LOG
-    logger("queue init with size %ld. Array ptr %p\n", size, array);
-    #endif
     return handle;
 }
 
@@ -32,8 +30,9 @@ bool queue_is_full(const queue_handle* handle){
 
 float queue_get_max(queue_handle* handle){
     float max = 0;
+    size_t pos = 0;
     for(size_t i = 0; i < handle->length; i++){
-        size_t pos = (handle->front + i) % handle->size;
+        pos = (handle->front + i) % handle->size;
         max = handle->data[pos] > max ? handle->data[pos] : max;
     }
     #ifdef QUEUE_LOG   
@@ -44,8 +43,9 @@ float queue_get_max(queue_handle* handle){
 
 float queue_get_min(queue_handle* handle){
     float min = FLT_MAX;
+    size_t pos = 0;
     for(size_t i = 0; i < handle->length; i++){
-        size_t pos = (handle->front + i) % handle->size;
+        pos = (handle->front + i) % handle->size;
         min = handle->data[pos] < min ? handle->data[pos] : min;
     }
     #ifdef QUEUE_LOG   

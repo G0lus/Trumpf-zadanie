@@ -3,21 +3,17 @@
 #include <string.h>
 #include <ctype.h>
 
+#define DATA_MAX_SIZE 8096U
+#define VALUES_MAX_SIZE 2048U
+#define VALUES_COLUMNS 4U
+#define ARGV_REQUIRED 3U
+
 #include "logger.h"
 #include "float_queue.h"
 
-#define ARGV_REQUIRED 2U
-#define DATA_CHUNK_SIZE 8096U
-#define VALUES_CHUNK_SIZE 2048U
-#define MOVING_WINDOW_SIZE 3U
-#define VALUES_COLUMNS 4U
-
-
-void moving_max(size_t window_size, size_t n, float in[static n], float out[static n]){
-    float window[window_size];
-    queue_handle handle = queue_init(window_size, &window[0]);
+void moving_max(size_t n, float in[static n], float out[static n]){
+    queue_handle handle = queue_init();
     for(size_t i = 0; i < n; i++){
-        
         if(queue_is_full(&handle)){
             queue_remove(&handle, NULL);
         }
@@ -26,9 +22,8 @@ void moving_max(size_t window_size, size_t n, float in[static n], float out[stat
     }
 }
 
-void moving_min(size_t window_size, size_t n, float in[static n], float out[static n]){
-    float window[window_size];
-    queue_handle handle = queue_init(window_size, &window[0]);
+void moving_min(size_t n, float in[static n], float out[static n]){
+    queue_handle handle = queue_init();
     for(size_t i = 0; i < n; i++){
         
         if(queue_is_full(&handle)){
@@ -39,9 +34,8 @@ void moving_min(size_t window_size, size_t n, float in[static n], float out[stat
     }
 }
 
-void moving_average(size_t window_size, size_t n, float in[static n], float out[static n]){
-    float window[window_size];
-    queue_handle handle = queue_init(window_size, &window[0]);
+void moving_average(size_t n, float in[static n], float out[static n]){
+    queue_handle handle = queue_init();
     float sum = 0;
     
     for(size_t i = 0; i < n; i++){
@@ -62,7 +56,6 @@ void moving_average(size_t window_size, size_t n, float in[static n], float out[
  * @param[in] data Must be at least of size n.
  * @param[out] values Must be valid, cannot be NULL.
  * @return Number of parsed values.
- * @note Must be optimized, now it goes through all data chars all over again. Maybe it can be merged with reading?
 */
 size_t parse_data(size_t n, char data[static n], float values[static 1])
 {
@@ -119,18 +112,42 @@ size_t read_file(char filename[static 1], size_t offset, size_t n, char data[sta
     return i;
 }
 
+/**
+ * @param[in] filename  Name of the file to write to (with extension)
+ * @param[in] max_row   Max number of rows to print to file
+ * @param[in] col   Columns of the data array
+ * @param[in] row   Rows of the data array
+ * @param[in] data  Col-dimensional array with values to print.
+ * @return number of bytes written to file or -1 if error opening file.
+ * @warning Providing the name of the file that already exists will overwrite it.
+*/
+size_t save_file(char filename[static 1], size_t max_row, size_t col, size_t row, float* data){
+    FILE* out_file = fopen(filename, "w");
+    if(!out_file){
+        perror("Cannot open file");
+    }
+    fprintf(out_file, "data;moving_avg;moving_max;moving_min;\n");
+    for(size_t r = 0; r < max_row; r++){
+        for(size_t c = 0; c < col; c++){
+            fprintf(out_file, "%.2f;", data[c*row + r]);
+        }
+        fprintf(out_file, "\n");
+    }
+    fclose(out_file);
+    return col*max_row;
+}
 
 int main(int argc, char** argv){
     if(argc < ARGV_REQUIRED){
-        logger("Usage: ./trumpf_zadanie <path_to_csv_file>\n");
+        logger("Usage: ./trumpf_zadanie <path_to_input_csv_file> <path_to_output_csv_file\n");
         return EXIT_FAILURE;
     }
-    char data[DATA_CHUNK_SIZE] = {0};
-    size_t bytes_read = read_file(argv[1], 0, DATA_CHUNK_SIZE, data);
+    char data[DATA_MAX_SIZE] = {0};
+    size_t bytes_read = read_file(argv[1], 0, DATA_MAX_SIZE, data);
     if(bytes_read == -1){
         return EXIT_FAILURE;
     }
-    float values[VALUES_COLUMNS][VALUES_CHUNK_SIZE] = {0};
+    float values[VALUES_COLUMNS][VALUES_MAX_SIZE] = {0};
     size_t values_cnt = parse_data(bytes_read, data, &values[0][0]);
     
     #ifdef PARSING_DATA_LOG
@@ -138,15 +155,11 @@ int main(int argc, char** argv){
         logger("%.2f\n", values[0][i]);
     }
     #endif
-    moving_average(MOVING_WINDOW_SIZE, values_cnt, &values[0][0], &values[1][0]);
-    moving_max(MOVING_WINDOW_SIZE, values_cnt, &values[0][0], &values[2][0]);
-    moving_min(MOVING_WINDOW_SIZE, values_cnt, &values[0][0], &values[3][0]);
-    FILE* out_file = fopen("out.csv", "w");
-    fprintf(out_file, "data\tmoving_avg\tmoving_max\tmoving_min\n");
-    for(size_t i = 0; i < values_cnt; i ++){
-        fprintf(out_file, "%.2f\t%.2f\t\t%.2f\t\t%.2f\n", values[0][i], values[1][i], values[2][i], values[3][i]);
-    }
-    fprintf(out_file, "\n");
-    fclose(out_file);
+
+    moving_average(values_cnt, &values[0][0], &values[1][0]);
+    moving_max(values_cnt, &values[0][0], &values[2][0]);
+    moving_min(values_cnt, &values[0][0], &values[3][0]);
+    
+    save_file(argv[2], values_cnt, VALUES_COLUMNS, VALUES_MAX_SIZE, &values[0][0]);
     return EXIT_SUCCESS;
 }
