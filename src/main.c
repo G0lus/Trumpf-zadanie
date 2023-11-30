@@ -3,13 +3,14 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "logger.h"
+#include "float_queue.h"
+
 #define DATA_MAX_SIZE 8096U
 #define VALUES_MAX_SIZE 2048U
 #define VALUES_COLUMNS 4U
 #define ARGV_REQUIRED 3U
 
-#include "logger.h"
-#include "float_queue.h"
 
 void moving_max(size_t n, float in[static n], float out[static n]){
     queue_handle handle = queue_init();
