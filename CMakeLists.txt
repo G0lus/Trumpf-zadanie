@@ -12,7 +12,7 @@ file(GLOB_RECURSE SRC
 include_directories(inc)
 add_compile_definitions(
     # QUEUE_LOG
-    MOVING_WINDOW_SIZE=3
+    MOVING_WINDOW_SIZE=500
 )
 add_compile_options(
     "-Wall" 
